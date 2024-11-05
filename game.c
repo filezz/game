@@ -33,6 +33,11 @@ typedef struct color  //render color
     unsigned int A ;
 } color_code;
 
+typedef struct player
+{
+    coordonates poz;
+    int size;
+}player;
 
 void initSDL() //intitilizing SDL and opening a window;
 {
@@ -72,7 +77,7 @@ void render_object(int x,int y,int sizex,int sizey,char *color)
     SDL_SetRenderDrawColor(app.renderer,rgb.R,rgb.G,rgb.B,rgb.A); 
     SDL_Rect square = {x,y,sizex,sizey};
     SDL_RenderFillRect(app.renderer,&square);
-    SDL_RenderPresent(app.renderer); 
+  //  SDL_RenderPresent(app.renderer); 
     
 }
 void doKeyDown(SDL_KeyboardEvent *event)
@@ -155,19 +160,15 @@ int main()
 {
     initSDL(); 
 
-    coordonates *fruit = malloc(sizeof(coordonates));
-    coordonates *snake = malloc(sizeof(coordonates)); 
-    
-    if (!fruit || !snake)
-        perror("Memory allocation friend") ; 
+    coordonates fruit;
+    player player;
 
-    fruit->x = rand() % (SCREEN_WIDTH - FRUITSIZE);
-    fruit->y = rand() % (SCREEN_HEIGHT - FRUITSIZE); 
+    fruit.x = rand() % (SCREEN_WIDTH - FRUITSIZE);
+    fruit.y = rand() % (SCREEN_HEIGHT - FRUITSIZE); 
     
-    snake->x = SCREEN_HEIGHT/2;
-    snake->y = SCREEN_WIDTH/2;
+    player.poz.x = SCREEN_HEIGHT/2;
+    player.poz.y = SCREEN_WIDTH/2;
 
-    SDL_Event current_event; 
     int running = 1;
     while(running) // loop game
     {
@@ -176,26 +177,30 @@ int main()
 
         doInput(); 
 
-        if (app.left) snake->x -= 5;
-        if (app.right) snake->x += 5;
-        if (app.up) snake->y -= 5;
-        if (app.down) snake->y += 5;
+        if (app.left) player.poz.x -= 5;
+        if (app.right) player.poz.x += 5;
+        if (app.up) player.poz.y -= 5;
+        if (app.down) player.poz.y += 5;
 
-        if(snake->x > SCREEN_WIDTH) snake->x = 0;
-        if(snake->x < 0) snake->x = SCREEN_WIDTH;
-        if(snake->y > SCREEN_HEIGHT) snake->y = 0; 
-        if(snake->y < 0 ) snake->y = SCREEN_HEIGHT;
+        if(player.poz.x > SCREEN_WIDTH) player.poz.x = 0;
+        if(player.poz.x < 0) player.poz.x = SCREEN_WIDTH;
+        if(player.poz.y > SCREEN_HEIGHT) player.poz.y = 0; 
+        if(player.poz.y < 0 ) player.poz.y = SCREEN_HEIGHT;
+
+        if(abs(player.poz.x - fruit.x) < SNAKESIZE && abs(player.poz.y - fruit.y) < SNAKESIZE){
+            fruit.x = rand() % (SCREEN_WIDTH - FRUITSIZE);
+            fruit.y = rand() % (SCREEN_HEIGHT - FRUITSIZE);
+            
+        }  
+
+        render_object(player.poz.x,player.poz.y,SNAKESIZE,SNAKESIZE,"yellow");
+        render_object(fruit.x,fruit.y,FRUITSIZE,FRUITSIZE,"red");
         
-        render_object(snake->x,snake->y,SNAKESIZE,SNAKESIZE,"yellow");
-        render_object(fruit->x,fruit->y,FRUITSIZE,FRUITSIZE,"red");
-        
-        SDL_Delay(18);
+        SDL_Delay(16);
         
         SDL_RenderPresent(app.renderer);
-    }
-    
-    free(fruit);
-    free(snake);
+    } 
+
     SDL_DestroyRenderer(app.renderer);
     SDL_DestroyWindow(app.window);
     SDL_Quit();

@@ -3,10 +3,11 @@
 #include<SDL2/SDL.h> //using sdl3 and its header 
 #include<time.h>
 
-#define SCREEN_WIDTH 1280
+#define SCREEN_WIDTH 720
 #define SCREEN_HEIGHT 720
 #define FRUITSIZE 10
 #define SNAKESIZE 12
+#define MAX_SNAKE_LENGTH 100
 
 typedef struct {
     SDL_Renderer *renderer; 
@@ -35,7 +36,7 @@ typedef struct color  //render color
 
 typedef struct player
 {
-    coordonates poz;
+    coordonates body[MAX_SNAKE_LENGTH];
     int size;
 }player;
 
@@ -77,7 +78,6 @@ void render_object(int x,int y,int sizex,int sizey,char *color)
     SDL_SetRenderDrawColor(app.renderer,rgb.R,rgb.G,rgb.B,rgb.A); 
     SDL_Rect square = {x,y,sizex,sizey};
     SDL_RenderFillRect(app.renderer,&square);
-  //  SDL_RenderPresent(app.renderer); 
     
 }
 void doKeyDown(SDL_KeyboardEvent *event)
@@ -154,21 +154,51 @@ void doInput()
         }
     }
 }
+void snake_position(player *snake ,int x, int y) //moving previous snake head to the last position, then adding a new snake head
+{
+    for(int i = snake->size-1;i>0;i --)
+        snake->body[i] = snake->body[i-1];
+    snake->body[0].x += x; //updating head position
+    snake->body[0].y += y; 
+}
+void checkCollision(player *snake, coordonates *fruit)
+{
+    if(abs(snake->body[0].x - fruit->x) < SNAKESIZE && abs(snake->body[0].y - fruit->y < SNAKESIZE)){
+        fruit->x = rand() % (SCREEN_WIDTH-FRUITSIZE);
+        fruit->y = rand() % (SCREEN_HEIGHT - FRUITSIZE); 
 
+        snake->size < 100 ? snake->size ++ : printf("You won");
+    }
+    if(snake->size > 2)
+        for(int i = 2; i < snake->size ; i++)
+            if(snake->body[0].x ==  snake->body[i].x && snake->body[0].y == snake->body[i].y)
+                exit(1);
+}
+
+void render_snake(player *snake)
+{
+    //render_object(snake->body[0].x,snake->body[0].x , SNAKESIZE,SNAKESIZE,"red");
+    for(int i =0; i<snake->size;i++) {
+        render_object(snake->body[i].x , snake->body[i].y , SNAKESIZE , SNAKESIZE , "yellow"); 
+        render_object(snake->body[0].x , snake->body[0].y , SNAKESIZE , SNAKESIZE , "red"); 
+    }
+}
 
 int main()
 {
     initSDL(); 
 
     coordonates fruit;
-    player player;
+    player snake;
+
+    int dx=0,dy=0 ; // directions
 
     fruit.x = rand() % (SCREEN_WIDTH - FRUITSIZE);
     fruit.y = rand() % (SCREEN_HEIGHT - FRUITSIZE); 
     
-    player.poz.x = SCREEN_HEIGHT/2;
-    player.poz.y = SCREEN_WIDTH/2;
-
+    snake.body[0].x = SCREEN_HEIGHT/2;
+    snake.body[0].y = SCREEN_WIDTH/2;
+    snake.size = 1; // 1 segment for the bodysnake
     int running = 1;
     while(running) // loop game
     {
@@ -177,24 +207,21 @@ int main()
 
         doInput(); 
 
-        if (app.left) player.poz.x -= 5;
-        if (app.right) player.poz.x += 5;
-        if (app.up) player.poz.y -= 5;
-        if (app.down) player.poz.y += 5;
+        if (app.left) dx = -5 , dy = 0; 
+        if (app.right) dx = 5 , dy = 0; 
+        if (app.up) dx = 0 , dy = 5;
+        if (app.down) dx = 0, dy = -5;
 
-        if(player.poz.x > SCREEN_WIDTH) player.poz.x = 0;
-        if(player.poz.x < 0) player.poz.x = SCREEN_WIDTH;
-        if(player.poz.y > SCREEN_HEIGHT) player.poz.y = 0; 
-        if(player.poz.y < 0 ) player.poz.y = SCREEN_HEIGHT;
-
-        if(abs(player.poz.x - fruit.x) < SNAKESIZE && abs(player.poz.y - fruit.y) < SNAKESIZE){
-            fruit.x = rand() % (SCREEN_WIDTH - FRUITSIZE);
-            fruit.y = rand() % (SCREEN_HEIGHT - FRUITSIZE);
-            
-        }  
-
-        render_object(player.poz.x,player.poz.y,SNAKESIZE,SNAKESIZE,"yellow");
+        if(snake.body[0].x > SCREEN_WIDTH) snake.body[0].x = 0;
+        if(snake.body[0].x < 0) snake.body[0].x = SCREEN_WIDTH;
+        if(snake.body[0].y > SCREEN_HEIGHT) snake.body[0].y = 0; 
+        if(snake.body[0].y < 0 ) snake.body[0].y = SCREEN_HEIGHT;
+ 
         render_object(fruit.x,fruit.y,FRUITSIZE,FRUITSIZE,"red");
+        
+        checkCollision(&snake,&fruit) ; 
+        snake_position(&snake,dx,dy);
+        render_snake(&snake);
         
         SDL_Delay(16);
         

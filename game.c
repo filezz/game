@@ -5,17 +5,17 @@
 
 #define SCREEN_WIDTH 720
 #define SCREEN_HEIGHT 720
-#define FRUITSIZE 10
-#define SNAKESIZE 12
+#define FRUITSIZE 22
+#define SNAKESIZE 22
 #define MAX_SNAKE_LENGTH 100
+typedef enum 
+{
+    NONE,UP,DOWN,LEFT,RIGHT 
+}direction;
 
 typedef struct {
     SDL_Renderer *renderer; 
     SDL_Window *window ;
-    int up; 
-    int down;
-    int left;
-    int right; // 4 directions for tracking movement
 } App; //app struct holds reference to our renderer and window that we will set up
 
 App app;
@@ -38,6 +38,7 @@ typedef struct player
 {
     coordonates body[MAX_SNAKE_LENGTH];
     int size;
+    direction direction;
 }player;
 
 void initSDL() //intitilizing SDL and opening a window;
@@ -80,56 +81,32 @@ void render_object(int x,int y,int sizex,int sizey,char *color)
     SDL_RenderFillRect(app.renderer,&square);
     
 }
-void doKeyDown(SDL_KeyboardEvent *event)
+void doKeyDown(SDL_KeyboardEvent *event,player *snake)
 {
     if(event->repeat == 0){
         switch(event->keysym.scancode)
         {
             case SDL_SCANCODE_UP:
-            app.up = 1;
+            if(snake->direction != DOWN) snake->direction = UP;
             break;
             
             case SDL_SCANCODE_DOWN:
-            app.down = 1;
+            if(snake->direction != UP) snake->direction = DOWN;
             break;
 
             case SDL_SCANCODE_LEFT: 
-            app.left = 1 ;
+            if(snake->direction != RIGHT ) snake->direction = LEFT ;
             break;
 
             case SDL_SCANCODE_RIGHT:
-            app.right = 1;
+            if(snake->direction != LEFT) snake->direction = RIGHT;
             break;
         }
 
     }
 }
 
-void doKeyUp(SDL_KeyboardEvent *event)
-{
-    if(event->repeat == 0){
-        switch(event->keysym.scancode)
-        {
-            case SDL_SCANCODE_UP:
-            app.up = 0;
-            break;
-            
-            case SDL_SCANCODE_DOWN:
-            app.down = 0;
-            break;
-
-            case SDL_SCANCODE_LEFT: 
-            app.left = 0 ;
-            break;
-
-            case SDL_SCANCODE_RIGHT:
-            app.right = 0;
-            break;
-        }
-
-    }   
-}
-void doInput()
+void doInput(player *snake)
 {
     SDL_Event input;
     
@@ -142,11 +119,7 @@ void doInput()
             break;
             
             case SDL_KEYDOWN:
-            doKeyDown(&input.key);
-            break;
-
-            case SDL_KEYUP : 
-            doKeyUp(&input.key);
+            doKeyDown(&input.key,snake);
             break;
 
             default : 
@@ -161,13 +134,20 @@ void snake_position(player *snake ,int x, int y) //moving previous snake head to
     snake->body[0].x += x; //updating head position
     snake->body[0].y += y; 
 }
-void checkCollision(player *snake, coordonates *fruit)
+void checkCollision(player *snake, coordonates *fruit) //use SDL_hasintersection for better collision check 
 {
-    if(abs(snake->body[0].x - fruit->x) < SNAKESIZE && abs(snake->body[0].y - fruit->y < SNAKESIZE)){
+    if(abs(snake->body[0].x - fruit->x) < SNAKESIZE && abs(snake->body[0].y - fruit->y )< SNAKESIZE){
         fruit->x = rand() % (SCREEN_WIDTH-FRUITSIZE);
         fruit->y = rand() % (SCREEN_HEIGHT - FRUITSIZE); 
 
-        snake->size < 100 ? snake->size ++ : printf("You won");
+        //intialize the last segment of the tail, if not initialize the segment can contain garbage values , apearing randomly on the screen
+        //in my case it was apearing in the far left corner
+        if(snake->size < MAX_SNAKE_LENGTH ){
+            snake->body[snake->size] = snake->body[snake->size - 2]; 
+            snake->size += 2;
+        }
+        else 
+            printf("You won") ;
     }
     if(snake->size > 2)
         for(int i = 2; i < snake->size ; i++)
@@ -177,10 +157,8 @@ void checkCollision(player *snake, coordonates *fruit)
 
 void render_snake(player *snake)
 {
-    //render_object(snake->body[0].x,snake->body[0].x , SNAKESIZE,SNAKESIZE,"red");
     for(int i =0; i<snake->size;i++) {
         render_object(snake->body[i].x , snake->body[i].y , SNAKESIZE , SNAKESIZE , "yellow"); 
-        render_object(snake->body[0].x , snake->body[0].y , SNAKESIZE , SNAKESIZE , "red"); 
     }
 }
 
@@ -191,6 +169,7 @@ int main()
     coordonates fruit;
     player snake;
 
+    snake.direction = RIGHT; 
     int dx=0,dy=0 ; // directions
 
     fruit.x = rand() % (SCREEN_WIDTH - FRUITSIZE);
@@ -205,12 +184,16 @@ int main()
         SDL_SetRenderDrawColor(app.renderer,0,0,0,255) ; //clearing the screan
         SDL_RenderClear(app.renderer);
 
-        doInput(); 
+        doInput(&snake); 
 
-        if (app.left) dx = -5 , dy = 0; 
-        if (app.right) dx = 5 , dy = 0; 
-        if (app.up) dx = 0 , dy = 5;
-        if (app.down) dx = 0, dy = -5;
+        switch(snake.direction) {
+            case NONE : dx = 0 , dy = 0; break;
+            case LEFT : dx = -4, dy = 0; break;
+            case RIGHT : dx = 4, dy = 0; break;
+            case UP :   dx = 0 , dy = -4; break; 
+            case DOWN : dx = 0, dy = 4; break;
+        }
+
 
         if(snake.body[0].x > SCREEN_WIDTH) snake.body[0].x = 0;
         if(snake.body[0].x < 0) snake.body[0].x = SCREEN_WIDTH;
